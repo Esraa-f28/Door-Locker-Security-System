@@ -1,0 +1,205 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+#include"pass.h"
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"std_types.h"
+#include<util/delay.h>
+
+
+uint8 trials;
+
+uint8 Password1; /* Variable to store the password first time and send it to MCU2 */
+uint8 Password2; /* Variable to store the password and send it to MCU2 to get checked */
+uint8 g_matchedflag; /* Flag to indicate if the two passwords match or not */
+uint8 Lives = MAX_ALLOWED_TRIES; /* Number of tries u get to try to insert the right password */
+uint8 g_ticks = 0; /* Variable to store number of seconds we get from the timer */
+uint8 g_MotorFlag = 0; /* Flag to exit APP_dooPorcessing Function */
+uint8 g_MotorUnlocking = 0; /* To decide to unlock or lock the door in the ISR*/
+uint8 g_AlarmFlag = 0; /* Flag to exit ERROR state in case 3 password wrong in row */
+
+
+uint16 PASSWARD_getPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	do{
+		LCD_displayString("Plz Enter Pass:");
+		LCD_moveCursor(1,0);
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+uint16 PASSWARD_reEnterPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+
+	do{
+		LCD_displayString("Plz re_Enter Pass:");
+		LCD_moveCursor(1,0);
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+void PASSWARD_savePass(void)
+{
+
+	UART_sendByte(PasswordUpdate);
+
+	do{
+		Password1=PASSWARD_getPASSWARD();
+		Password2 =PASSWARD_reEnterPASSWARD();
+
+		UART_sendByte((uint8)(Password1));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password1>>8));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password2));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password2>>8));
+		_delay_ms(50);
+
+	}while(g_matchedflag==UNMATCHED);
+
+	g_matchedflag=MATCHED;
+	LCD_displayStringRowColumn(0, 0, "Matched");
+}
+
+
+uint8 APP_comparePassWithEEPROM()
+{
+	trials = MAX_ALLOWED_TRIES;
+	uint16 passwardtocheck;
+	do
+	{
+		g_matchedflag = TRUE;
+		passwardtocheck=PASSWARD_getPASSWARD();
+
+		UART_sendByte(checkPassword);
+		_delay_ms(50);
+		UART_sendByte((uint8)(checkPassword>>8));
+
+
+		LCD_clearScreen();
+		if(UART_receiveByte() ==  MATCHED) /* in case they are match print Matched on LCD and return MSG_Matched */
+		{
+			LCD_displayStringRowColumn(0, 4, "Matched");
+			_delay_ms(1000);
+			return MATCHED;
+		}
+		else
+		{
+			trials--;
+			LCD_displayStringRowColumn(0, 2, "UnMatched");
+			LCD_displayStringRowColumn(1, 0, "Trials left= ");
+			LCD_intgerToString(trials);
+			_delay_ms(1000);
+		}
+	}while((trials> 0));
+	return UNMATCHED;
+}
+
+
+void TIMER1_MOTOR_15SEC_ISR(void)
+{
+	g_ticks++;
+	if(g_ticks == 15) /* wait until number of seconds = 15 */
+	{
+		g_ticks = 0; /* clear the number of seconds so we can use it in other functions*/
+		LCD_clearScreen();
+		if(g_MotorUnlocking == 0) /* in case it is the first time to come here then we want to unlock the door */
+		{
+			LCD_displayStringRowColumn(0, 0, "Door Is Locked");
+			/* Waiting MC1 to be Ready as LCD is slow at writing and Turning Motor On or OFF is fast so there will
+			 * a delay that we can solve by waiting LCD to write then turn the motor on or off */
+			UART_sendByte(MC_Ready);
+			g_MotorUnlocking++; /* go to the other branch next time */
+			TIMER1_COMP_setCallBack(TIMER1_MOTOR_3SEC_ISR); /* to wait another 3 seconds then lock the door again */
+		}
+		else if(g_MotorUnlocking == 1) /* in case it is the second time to come here then we handled every case for the door and we want to exit*/
+		{
+			g_MotorUnlocking = 0;
+			g_exitMotorFlag = 1; /* to exit the function */
+			TIMER1_deInit(); /* stop the timer */
+		}
+	}
+}
+
+/*******************************************************************************
+* Function Name:		TIMER1_MOTOR_3SEC_ISR
+* Description:			ISR function for the timer in case we want to count 3 seconds then lock the door
+* Parameters (in):    	None
+* Parameters (out):   	None
+* Return value:      	void
+********************************************************************************/
+void TIMER1_MOTOR_3SEC_ISR(void)
+{
+	g_ticks++;
+	if(g_ticks == 3) /* wait until number of seconds = 3 */
+	{
+		g_ticks = 0; /* clear the number of seconds */
+		LCD_clearScreen();
+		LCD_displayStringRowColumn(0, 3, "Locking");
+		LCD_displayStringRowColumn(1, 3, "The Door");
+		/* Waiting MC1 to be Ready as LCD is slow at writing and Turning Motor On or OFF is fast so there will
+		 * a delay that we can solve by waiting LCD to write then turn the motor on or off */
+		UART_sendByte(MC_Ready);
+		TIMER1_COMP_setCallBack(TIMER1_MOTOR_15SEC_ISR); /* so we can count another 15 seconds then stop the motor */
+	}
+}
+
+/*******************************************************************************
+* Function Name:		TIMER1_ALARM_ISR
+* Description:			ISR function for the timer in case we want to count 60 seconds then turn off the alarm
+* Parameters (in):    	None
+* Parameters (out):   	None
+* Return value:      	void
+********************************************************************************/
+void TIMER1_ALARM_ISR()
+{
+	g_ticks++;
+	if(g_ticks == 60) /* wait until number of seconds = 60 */
+	{
+		g_ticks = 0;
+		g_exitAlarmFlag = 1; /* exit ERROR state */
+		TIMER1_deInit(); /* stop the timer */
+	}
+}

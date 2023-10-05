@@ -1,0 +1,48 @@
+17:49:50 **** Incremental Build of configuration Debug for project final ****
+make all 
+Building file: ../HumanECu.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O0 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=1000000UL -MMD -MP -MF"HumanECu.d" -MT"HumanECu.o" -c -o "HumanECu.o" "../HumanECu.c"
+In file included from ../application.h:14,
+                 from ../HumanECu.c:6:
+c:/winavr-20100110/lib/gcc/../../avr/include/util/delay.h:90:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+Finished building: ../HumanECu.c
+ 
+Building file: ../application.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O0 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=1000000UL -MMD -MP -MF"application.d" -MT"application.o" -c -o "application.o" "../application.c"
+In file included from ../application.h:14,
+                 from ../application.c:5:
+c:/winavr-20100110/lib/gcc/../../avr/include/util/delay.h:90:3: warning: #warning "Compiler optimizations disabled; functions from <util/delay.h> won't work as designed"
+Finished building: ../application.c
+ 
+Building file: ../timers.c
+Invoking: AVR Compiler
+avr-gcc -Wall -g2 -gstabs -O0 -fpack-struct -fshort-enums -ffunction-sections -fdata-sections -std=gnu99 -funsigned-char -funsigned-bitfields -mmcu=atmega32 -DF_CPU=1000000UL -MMD -MP -MF"timers.d" -MT"timers.o" -c -o "timers.o" "../timers.c"
+../timers.c: In function 'Timer1_setCallBack':
+../timers.c:68: warning: function return types not compatible due to 'volatile'
+Finished building: ../timers.c
+ 
+Building target: final.elf
+Invoking: AVR C Linker
+avr-gcc -Wl,-Map,final.map -mmcu=atmega32 -o "final.elf"  ./.metadata/.plugins/org.eclipse.cdt.make.core/specs.o  ./HumanECu.o ./application.o ./gpio.o ./keypad.o ./lcd.o ./timers.o ./uart.o   
+Finished building target: final.elf
+ 
+Invoking: Print Size
+avr-size --format=avr --mcu=atmega32 final.elf
+AVR Memory Usage
+----------------
+Device: atmega32
+
+Program:   12044 bytes (36.8% Full)
+(.text + .data + .bootloader)
+
+Data:        212 bytes (10.4% Full)
+(.data + .bss + .noinit)
+
+
+Finished building: sizedummy
+ 
+
+17:49:51 Build Finished. 0 errors, 3 warnings. (took 1s.188ms)
+

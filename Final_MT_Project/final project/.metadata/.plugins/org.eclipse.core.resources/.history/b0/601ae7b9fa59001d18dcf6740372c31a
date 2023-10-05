@@ -1,0 +1,39 @@
+/******************************************************************************
+ * File Name:
+ * Description: Source file for
+ * Name:Esraa Fawzy
+ *******************************************************************************/
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"pass.h"
+
+uint16 passward,recData;
+uint8 g_keyPressed;
+
+
+
+int main(void)
+{
+	LCD_init();
+
+	UART_ConfigType UART_Config = {eight_bits,even,one_bit,9600};
+	UART_init(&UART_Config);
+	PASSWARD_savePass();
+	while(1)
+	{
+		g_keyPressed=menu();
+		switch(g_keyPressed)
+		{
+		case'+':
+			//APP_door();
+		break;
+		case'-':
+			APP_changePassword();
+		break;
+
+		}
+
+	}
+}
+

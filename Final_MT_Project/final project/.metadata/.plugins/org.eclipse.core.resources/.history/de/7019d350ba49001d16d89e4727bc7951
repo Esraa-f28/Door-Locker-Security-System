@@ -1,0 +1,21 @@
+ /******************************************************************************
+ * Module: GPIO
+ * File Name: gpio.c
+ * Description: Source file for the AVR GPIO driver
+ * Name:Esraa Fawzy
+ *******************************************************************************/
+
+int main(void)
+{
+	LCD_init();
+	LCD_displayString("Please Enter Password");
+
+	while(1)
+	{
+
+
+	}
+
+
+
+}

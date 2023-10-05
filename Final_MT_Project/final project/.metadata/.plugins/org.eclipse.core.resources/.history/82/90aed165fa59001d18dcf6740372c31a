@@ -1,0 +1,252 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+#include"pass.h"
+
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"std_types.h"
+#include<util/delay.h>
+#include"timers.h"
+
+
+Timer1_ConfigType timerConfig={0,8000,pre1024,ctc};
+
+uint8 Password1; /* store first password */
+uint8 Password2; /* store second password  */
+uint8 g_matchedflag; /* Flag to indicate if the two passwords match */
+uint8 trials = MAX_ALLOWED_TRIES; /* max no of trials to enter right password */
+uint8 g_ticks = 0; /* Variable to store number of seconds */
+uint8 g_alarmFlag = 0;
+uint8 g_motorFlag = 0;
+uint8 g_motorUnlocking = 0;
+uint8 g_keyPressed ;
+
+
+void TIMER1_ALARM_ISR()
+{
+	g_ticks++;
+	if(g_ticks == 60)
+	{
+		g_ticks = 0;
+		g_alarmFlag = 1;
+		Timer1_deInit();
+	}
+}
+void TIMER1_15SEC_ISR(void)
+{
+	g_ticks++;
+	if(g_ticks == 15)
+	{
+		g_ticks = 0;
+		LCD_clearScreen();
+		if(g_motorUnlocking == 0)
+		{
+			g_motorUnlocking++;
+			Timer1_setCallBack(TIMER1_3SEC_ISR);
+		}
+		else if(g_motorUnlocking == 1)
+		{
+
+			UART_sendByte(READY);
+			g_motorUnlocking = 0;
+			g_motorFlag = 1;
+			Timer1_deInit();
+		}
+	}
+}
+
+void TIMER1_3SEC_ISR(void)
+{
+	g_ticks++;
+	if(g_ticks == 3)
+	{
+		LCD_clearScreen();
+		LCD_displayStringRowColumn(0, 3, "DOOR LOCK");
+		g_ticks = 0;
+		Timer1_setCallBack(TIMER1_15SEC_ISR);
+	}
+}
+
+
+uint16 PASSWARD_getPASSWORD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	LCD_displayString("Plz Enter Pass:");
+	LCD_moveCursor(1,0);
+
+
+	do{
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+uint16 PASSWARD_reEnterPASSWORD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	LCD_displayString("Plz re_Enter Pass:");
+
+
+	do{
+		LCD_moveCursor(1,0);
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+void PASSWORD_savePass(void)
+{
+
+	do{
+		UART_sendByte(PASSWARDUPDATE);
+		Password1=PASSWARD_getPASSWARD();
+		Password2 =PASSWARD_reEnterPASSWARD();
+		LCD_intgerToString(Password1);
+
+		UART_sendByte((uint8)(Password1));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password1>>8));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password2));
+		_delay_ms(50);
+		UART_sendByte((uint8)(Password2>>8));
+		_delay_ms(50);
+
+	}while(UART_recieveByte()==UNMATCHED);
+
+	g_matchedflag=MATCHED;
+	LCD_displayStringRowColumn(0, 0, "Matched");
+}
+
+uint8 menu(void)
+{
+	LCD_clearScreen();
+	LCD_displayString("+ : OPen Door");
+	LCD_moveCursor(1, 0);
+	LCD_displayString("- : Change Pass");
+	g_keyPressed = KEYPAD_getPressedKey();
+	_delay_ms(500);
+	UART_sendByte(g_keyPressed);
+	return g_keyPressed;
+
+}
+
+uint8 PASSWORD_checkPass(void)
+{
+
+	trials = MAX_ALLOWED_TRIES;
+	uint16 passwardtocheck;
+	do
+	{
+		UART_sendByte(checkPassword);
+		passwardtocheck=PASSWARD_getPASSWARD();
+
+		UART_sendByte((uint8)passwardtocheck);
+		_delay_ms(50);
+		UART_sendByte((uint8)(passwardtocheck>>8));
+
+
+		LCD_clearScreen();
+		if(UART_recieveByte() ==  MATCHED)
+		{
+			LCD_displayStringRowColumn(0, 4, "Matched");
+			_delay_ms(1000);
+			return MATCHED;
+		}
+		else
+		{
+			trials--;
+			LCD_displayStringRowColumn(0, 2, "UnMatched");
+			LCD_displayStringRowColumn(1, 0, "Trials left= ");
+			LCD_intgerToString(trials);
+			_delay_ms(1000);
+		}
+	}while((trials> 0));
+	return UNMATCHED;
+}
+
+void APP_alarm()
+{
+	g_ticks = 0;
+	g_alarmFlag = 0;
+	LCD_clearScreen();
+	LCD_displayStringRowColumn(0, 4, "ERROR ");
+	UART_sendByte(ALARM);
+	TIMER1_init(&timerConfig);
+	Timer1_setCallBack(TIMER1_ALARM_ISR);
+	while(g_alarmFlag == 0);
+}
+
+
+
+
+void APP_changePassword()
+{
+	uint8 PasswordsCompare = APP_comparePassWithEEPROM() ;
+	if(PasswordsCompare == MATCHED)
+	{
+		PASSWARD_savePass();
+	}
+	if(PasswordsCompare == UNMATCHED)
+	{
+		APP_alarm();
+	}
+
+}
+void APP_door()
+{
+	uint8 Passwordtocheck ;
+	Passwordtocheck=PASSWORD_checkPass();
+	if(Passwordtocheck == MATCHED)
+	{
+		UART_sendByte(DOOR);
+		g_motorFlag = 0;
+		g_ticks = 0;
+		LCD_displayStringRowColumn(0, 0, "DOOR UNLOCK");
+		Timer1_setCallBack(TIMER1_15SEC_ISR);
+		Timer1_init(&timerConfig);
+		while(g_motorFlag == 0);
+	}
+	else
+	{
+		APP_alarm();
+	}
+}
+

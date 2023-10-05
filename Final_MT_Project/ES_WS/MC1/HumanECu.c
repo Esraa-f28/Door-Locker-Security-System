@@ -1,0 +1,53 @@
+/******************************************************************************
+ * File Name:
+ * Description: Source file for
+ * Name:Esraa Fawzy
+ *******************************************************************************/
+#include "application.h"
+
+
+
+uint8 g_keyPressed;
+uint8 StateOfPassword;
+
+
+
+int main(void)
+{
+	LCD_init();
+
+	UART_ConfigType uartConfig={ BITS_8,NO_PARITY,BIT_1,BAUD_RATE_9600};
+	UART_init(&uartConfig);
+	sei();
+	//UART_sendByte(READY);
+	/*LCD_displayStringRowColumn(0, 0, "Plz Enter pass2:");
+
+	while( UART_recieveByte() != READY);
+	LCD_displayStringRowColumn(0, 0, "Plz Enter pass:");
+
+	StateOfPassword =  UART_recieveByte();
+	if(StateOfPassword!=PasswordSET)
+	{} */
+		Password_savePassword();
+
+
+
+	while(1)
+	{
+		do{
+		g_keyPressed=menu();
+		}while(g_keyPressed != '-' && g_keyPressed!= '+');
+		switch(g_keyPressed)
+		{
+		case'+':
+			Door();
+		break;
+		case'-':
+			PASSWORD_changePassword();
+			break;
+
+		}
+
+	}
+}
+

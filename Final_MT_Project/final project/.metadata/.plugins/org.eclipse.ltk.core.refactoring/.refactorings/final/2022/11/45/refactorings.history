@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;final/pass.h&apos; to &apos;application.h&apos;" description="Rename resource &apos;pass.h&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="pass.h" name="application.h" stamp="1667317387871" updateReferences="true"/>
+</session>

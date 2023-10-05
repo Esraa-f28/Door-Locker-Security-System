@@ -1,0 +1,34 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+
+#ifndef PASS_H_
+#define PASS_H_
+
+
+
+#define READY  0x10
+#define DONE   0x20
+#define RIGHT  0x30
+#define WRONG_STATUS  0x40
+#define OPEN   0x50
+#define OPENED 0x60
+#define CLOSE  0x70
+#define FIRST 0x9
+#define NOT_FIRST 0x8
+
+
+
+#define ADMIN_PASS_STATUS_ADDRESS (uint16)0X100
+#define GUEST_PASS_STATUS_ADDRESS (uint16)0X101
+#define EEPROM_ADMIN_ADDRESS      (uint16)0X102
+#define EEPROM_GUEST_ADDRESS      (uint16)0X106
+#define LOGIN_BLOCKED_ADDRESS     (uint16)0X10A
+
+uint16 PASSWARD_getPASSWARD(void);
+uint16 PASSWARD_reEnterPASSWARD(void);
+void PASSWARD_checkPassward(void);
+
+
+#endif /* PASS_H_ */

@@ -1,0 +1,55 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+#include"pass.h"
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"std_types.h"
+#include<util/delay.h>
+
+
+uint16 PASSWARD_getPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	LCD_displayString("Plz Enter Pass:");
+	for(int i=0;i<5;i++)
+	{
+		key=KEYPAD_getPressedKey();
+
+		/*pressed key must be integer */
+		if(key>=0 && key<=9)
+		{
+			LCD_moveCursor(1,0);
+			LCD_displayCharacter('*');
+		}
+	}
+	_delay_ms(500);
+	UART_sendByte((uint8)(pass));
+	UART_sendByte((uint8)(pass>>8));
+	return pass;
+}
+
+void PASSWARD_reEnterPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	LCD_displayString("Plz re_Enter Pass:");
+	for(int i=0;i<5;i++)
+	{
+		key=KEYPAD_getPressedKey();
+
+		/*pressed key must be integer */
+		if(key>=0 && key<=9)
+		{
+			LCD_moveCursor(1,0);
+			LCD_displayCharacter('*');
+			pass= pass * 10 +key;
+		}
+	}
+	_delay_ms(500);
+	UART_sendByte((uint8)(pass));
+	UART_sendByte((uint8)(pass>>8));
+}

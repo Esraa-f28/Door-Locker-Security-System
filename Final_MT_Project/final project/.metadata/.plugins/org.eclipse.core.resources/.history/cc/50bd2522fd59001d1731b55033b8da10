@@ -1,0 +1,129 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+#include"pass.h"
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"std_types.h"
+#include<util/delay.h>
+
+uint8 g_matchedflag;
+uint8 trials;
+
+
+uint16 PASSWARD_getPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+	do{
+		LCD_displayString("Plz Enter Pass:");
+		LCD_moveCursor(1,0);
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+uint16 PASSWARD_reEnterPASSWARD(void){
+	uint16 pass;
+	uint8 key;
+	LCD_clearScreen();
+
+	do{
+		LCD_displayString("Plz re_Enter Pass:");
+		LCD_moveCursor(1,0);
+		for(int i=0;i<5;i++)
+		{
+			key=KEYPAD_getPressedKey();
+			/*pressed key must be integer */
+			if(key>=0 && key<=9)
+			{
+				LCD_intgerToString(key);
+				//LCD_displayCharacter('*');
+				pass= pass * 10 +key;
+
+			}
+			else
+			{
+				i--;
+			}
+		}
+		_delay_ms(500);
+	}while(KEYPAD_getPressedKey() != ENTER_KEY);
+	return pass;
+}
+
+void PASSWARD_savePass(void)
+{
+	uint16 pass1=PASSWARD_getPASSWARD();
+	uint16 pass2 =PASSWARD_reEnterPASSWARD();
+	do{
+		pass1=PASSWARD_getPASSWARD();
+		pass2 =PASSWARD_reEnterPASSWARD();
+
+		UART_sendByte((uint8)(pass1));
+		_delay_ms(50);
+		UART_sendByte((uint8)(pass1>>8));
+		_delay_ms(50);
+		UART_sendByte((uint8)(pass2));
+		_delay_ms(50);
+		UART_sendByte((uint8)(pass2>>8));
+		_delay_ms(50);
+
+	}while(g_matchedflag==UNMATCHED);
+
+	g_matchedflag=MATCHED;
+	LCD_displayStringRowColumn(0, 0, "Matched");
+}
+
+
+uint8 APP_comparePassWithEEPROM()
+{
+	trials = MAX_ALLOWED_TRIES; /* Number of Tries Allowed */
+	do
+	{
+		PasswordMatchFlag = TRUE;
+		PASSWARD_getPASSWARD();
+
+		UART_sendByte(MSG_checkPassword);  /* Telling MCU2 that MCU1 want to check if the password match the one in the EEPROM */
+
+		for(uint8 j = 0 ; j < PASSWORD_SIZE	; j++) /* send the claimed password */
+		{
+			UART_sendByte(Password2[j]);
+			while(UART_receiveByte() != MC_Ready);
+		}
+		LCD_clearScreen();
+		if(UART_receiveByte() == MSG_Matched) /* in case they are match print Matched on LCD and return MSG_Matched */
+		{
+			LCD_displayStringRowColumn(0, 4, "Matched");
+			_delay_ms(1000);
+			return MSG_Matched; /* to exit the whole function */
+		}
+		else /* in case they are not matched, decrease number of tries and try again if tries > 0 */
+		{
+			trials--; /* decrease number of tries by 1 if the user missed */
+			LCD_displayStringRowColumn(0, 3, "UnMatched");
+			LCD_displayStringRowColumn(1, 0, "Tries left = ");
+			LCD_intgerToString(trials);
+			_delay_ms(1000);
+		}
+	}while((trials> 0)); /* wait until the user uses all number of tries available */
+	return MSG_UnMatched; /* in case the user used all his tries and didn't get the password right at any one of them */
+}

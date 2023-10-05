@@ -1,0 +1,121 @@
+/******************************************************************************
+ * File Name:
+ * Description: Source file for
+ * Name:Esraa Fawzy
+ *******************************************************************************/
+#include"lcd.h"
+#include"keypad.h"
+#include"USART.h"
+#include"pass.h"
+
+uint16 passward,recData;
+
+void Password_setup(void)
+{
+
+	do{
+		passward=PASSWARD_getPASSWARD();
+		PASSWARD_reEnterPASSWARD();
+		recData=UART_recieveByte();
+	}
+	while(recData==UNMATCHED);
+}
+
+int main(void)
+{
+	LCD_init();
+
+	UART_ConfigType UART_Config = {eight_bits,even,one_bit,9600};
+	UART_init(&UART_Config);
+	Password_setup();
+	uint8 keyPressed;
+	while(1)
+	{
+		LCD_clearScreen();
+		LCD_displayString("+ : OPen Door");
+		LCD_moveCursor(1, 0);
+		LCD_displayString("- : Change Pass");
+		keyPressed = KEYPAD_getPressedKey();
+		_delay_ms(2000);
+
+		UART_sendByte(keyPressed);
+
+		switch(keyPressed)
+		{
+		case '-':
+			do{
+
+				passward = PASSWORD_getPassword();
+				UART_sendByte((uint8)( passward));
+				UART_sendByte((uint8)( passward>>8));
+				dataRec= UART_recieveByte();
+				if(dataRec == RIGHT)
+				{
+					UART_sendByte(RIGHT);
+					LCD_clearScreen();
+					LCD_moveCursor(0, 0);
+					passward=PASSWARD_getPASSWARD();
+					passward2=PASSWARD_reEnterPASSWARD();
+				}
+				else
+					UART_sendByte(RIGHT);
+			}while(temp==WRONG);
+
+			/*
+			 * when he enter the write old password he will managed to set a new one
+
+
+			PASSWORD_setPassword();
+			break;
+
+
+		case '+':
+
+			do{
+
+				passward = PASSWORD_getPassword();
+
+				keyPressed= UART_recieveByte();
+				if(keyPressed == WRONG)
+				{
+					UART_sendByte(WRONG);
+					LCD_clearScreen();
+					LCD_moveCursor(0, 0);
+					LCD_displayString("STOP a THIEF....");
+					while(UART_recieveByte()!=DONE){}
+				}
+				else
+					UART_sendByte(RIGHT);
+			}while(keyPressed==WRONG);
+
+			/*
+			 * when he enter the write old password he will managed to open the door
+
+
+			UART_sendByte(OPEN);
+
+			LCD_clearScreen();
+			LCD_moveCursor(0, 0);
+			LCD_displayString("OPENNING..."); // displaying the state of the door
+
+			while(UART_recieveByte()!=OPENED){}
+
+			LCD_clearScreen();
+			LCD_moveCursor(0, 0);
+			LCD_displayString("DOOR OPENED --)");
+
+			while(UART_recieveByte()!=CLOSE){}
+
+			LCD_clearScreen();
+			LCD_moveCursor(0, 0);
+			LCD_displayString("CLOSING...");
+
+
+			while(UART_recieveByte()!=DONE){}
+
+			break;
+		}*/
+
+	}
+}
+

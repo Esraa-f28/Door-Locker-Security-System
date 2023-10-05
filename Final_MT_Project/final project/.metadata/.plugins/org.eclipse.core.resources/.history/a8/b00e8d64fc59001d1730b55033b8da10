@@ -1,0 +1,25 @@
+/******************************************************************************
+ * File Name: pass.h
+ * Author: Esraa Fawzy
+ *******************************************************************************/
+
+#ifndef PASS_H_
+#define PASS_H_
+
+#include"std_types.h"
+
+
+
+#define WRONG 1
+#define RIGHT 2
+#define UNMATCHED 3
+#define MATCHED 4
+#define OPEN 5
+#define CLOSE 6
+
+
+uint16 PASSWARD_getPASSWARD(void);
+void PASSWARD_reEnterPASSWARD(void);
+
+
+#endif /* PASS_H_ */
